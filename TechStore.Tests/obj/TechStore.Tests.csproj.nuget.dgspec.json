@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\C# ASP\\TechStore.Tests\\TechStore.Tests.csproj": {}
+    "D:\\C# ASP\\TechStore_Upd\\TechStore.Tests\\TechStore.Tests.csproj": {}
   },
   "projects": {
-    "D:\\C# ASP\\TechStore.Tests\\TechStore.Tests.csproj": {
+    "D:\\C# ASP\\TechStore_Upd\\TechStore.Tests\\TechStore.Tests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\C# ASP\\TechStore.Tests\\TechStore.Tests.csproj",
+        "projectUniqueName": "D:\\C# ASP\\TechStore_Upd\\TechStore.Tests\\TechStore.Tests.csproj",
         "projectName": "TechStore.Tests",
-        "projectPath": "D:\\C# ASP\\TechStore.Tests\\TechStore.Tests.csproj",
+        "projectPath": "D:\\C# ASP\\TechStore_Upd\\TechStore.Tests\\TechStore.Tests.csproj",
         "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "D:\\C# ASP\\TechStore.Tests\\obj\\",
+        "outputPath": "D:\\C# ASP\\TechStore_Upd\\TechStore.Tests\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -32,8 +32,8 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "D:\\C# ASP\\TechStore\\TechStore.csproj": {
-                "projectPath": "D:\\C# ASP\\TechStore\\TechStore.csproj"
+              "D:\\C# ASP\\TechStore_Upd\\TechStore\\TechStore.csproj": {
+                "projectPath": "D:\\C# ASP\\TechStore_Upd\\TechStore\\TechStore.csproj"
               }
             }
           }
@@ -95,14 +95,14 @@
         }
       }
     },
-    "D:\\C# ASP\\TechStore\\TechStore.csproj": {
+    "D:\\C# ASP\\TechStore_Upd\\TechStore\\TechStore.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\C# ASP\\TechStore\\TechStore.csproj",
+        "projectUniqueName": "D:\\C# ASP\\TechStore_Upd\\TechStore\\TechStore.csproj",
         "projectName": "TechStore",
-        "projectPath": "D:\\C# ASP\\TechStore\\TechStore.csproj",
+        "projectPath": "D:\\C# ASP\\TechStore_Upd\\TechStore\\TechStore.csproj",
         "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "D:\\C# ASP\\TechStore\\obj\\",
+        "outputPath": "D:\\C# ASP\\TechStore_Upd\\TechStore\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

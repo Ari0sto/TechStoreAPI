@@ -145,5 +145,29 @@ namespace TechStore.Tests
             Assert.False(result);
         }
 
+        [Fact]
+        public async Task Create_Should_ThrowException_When_PriceIsNegative()
+        {
+            
+            var context = GetInMemoryDbContext();
+            var service = new ProductService(context);
+
+            // Попытка создать товар с ценой -100
+            var badProduct = new CreateProductDto
+            {
+                Name = "Bad Product",
+                Price = -100,
+                Stock = 10
+            };
+
+            
+            var ex = await Assert.ThrowsAsync<Exception>(async () =>
+            {
+                await service.CreateAsync(badProduct);
+            });
+
+            Assert.Equal("Цена не может быть отрицательной", ex.Message);
+        }
+
     }
 }

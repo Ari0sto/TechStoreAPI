@@ -21,6 +21,33 @@ namespace TechStore.Tests
         }
 
         [Fact]
+        public async Task CreateOrder_Should_ThrowException_When_Quantity_Is_Negative()
+        {
+            var context = GetInMemoryDbContext();
+            var product = new Entities.Product { Name = "Test", Price = 100, Stock = 10, IsActive = true };
+            context.Products.Add(product);
+            await context.SaveChangesAsync();
+
+            var service = new OrderService(context);
+
+            // создание "плохого" заказа с отрицательным количеством
+            var orderDto = new CreateOrderDto
+            {
+                Items = new List<CreateOrderItemDto>
+        {
+            new CreateOrderItemDto { ProductId = product.Id, Quantity = -5 }
+        }
+            };
+
+            var ex = await Assert.ThrowsAsync<Exception>(async () =>
+            {
+                await service.CreateOrderAsync("user1", orderDto);
+            });
+
+            Assert.Contains("должно быть больше 0", ex.Message);
+        }
+
+        [Fact]
         public async Task CreateOrder_Should_Throw_Exception_When_Stock_Is_Not_Enough()
         {
             var context = GetInMemoryDbContext();

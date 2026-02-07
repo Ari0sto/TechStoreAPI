@@ -28,6 +28,11 @@ namespace TechStore.Services
 
             foreach (var itemDto in dto.Items)
             {
+                if (itemDto.Quantity <= 0)
+                {
+                    throw new Exception($"Количество товара должно быть больше 0. Ошибка в товаре ID: {itemDto.ProductId}");
+                }
+
                 var product = await _context.Products.FindAsync(itemDto.ProductId);
 
                 // Проверки

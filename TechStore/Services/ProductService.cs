@@ -55,6 +55,9 @@ namespace TechStore.Services
         // создать товар (для АДМИНА)
         public async Task<ProductDto> CreateAsync(CreateProductDto dto)
         {
+            if (dto.Price < 0) throw new Exception("Цена не может быть отрицательной");
+            if (dto.Stock < 0) throw new Exception("Количество не может быть отрицательным");
+
             var product = new Product
             {
                 Name = dto.Name,
@@ -83,6 +86,9 @@ namespace TechStore.Services
         // обновить товар
         public async Task<ProductDto?> UpdateAsync(int id, UpdateProductDto dto)
         {
+            if (dto.Price < 0) throw new Exception("Цена не может быть отрицательной");
+            if (dto.Stock < 0) throw new Exception("Количество не может быть отрицательным");
+            
             var product = await _context.Products.FindAsync(id);
             if (product == null) return null;
 
