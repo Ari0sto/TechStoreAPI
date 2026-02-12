@@ -10,7 +10,7 @@ REST API для интернет-магазина техники, разрабо
 ## Технологии
 - **Backend:** C# / ASP.NET Core Web API
 - **Database:** MSSQL / Entity Framework Core
-- **Testing:** xUnit / Moq / InMemory Database
+- **Testing:** xUnit / InMemory Database
 
 ## Тестирование
 Проект покрыт Unit-тестами (xUnit) на **90%** (Services + Controllers).
