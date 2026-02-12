@@ -30,6 +30,7 @@ namespace TechStore.Services
                     Description = p.Description,
                     Price = p.Price,
                     Stock = p.Stock,
+                    ImageUrl = p.ImageUrl
                 })
                 .ToListAsync();
         }
@@ -100,6 +101,8 @@ namespace TechStore.Services
             product.IsActive = dto.IsActive;
             product.IsDeleted = dto.IsDeleted;
 
+            product.ImageUrl = dto.ImageUrl;
+
             await _context.SaveChangesAsync();
 
             return new ProductDto
@@ -108,7 +111,8 @@ namespace TechStore.Services
                 Name = product.Name,
                 Description = product.Description,
                 Price = product.Price,
-                Stock = product.Stock
+                Stock = product.Stock,
+                ImageUrl = product.ImageUrl
             };
         }
 

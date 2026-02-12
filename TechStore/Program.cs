@@ -95,6 +95,12 @@ app.UseAuthorization();
 // middleware (обработчик ошибок)
 app.UseMiddleware<TechStore.Middleware.ExceptionMiddleware>();
 
+app.UseDefaultFiles(); // Ищет index.html по умолчанию
+app.UseStaticFiles();  // Разрешает доступ к папке wwwroot
+
 app.MapControllers();
+
+// Seeder activate
+await DbSeeder.SeedProductsAsync(app);
 
 app.Run();

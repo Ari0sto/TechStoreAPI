@@ -16,5 +16,8 @@
 
         // Доступность товара (этот параметр меняет админ)
         public bool IsActive { get; set; } = true;
+
+        // Ссылка на картинку
+        public string? ImageUrl { get; set; } 
     }
 }

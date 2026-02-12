@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TechStore.DTOs;
+using TechStore.Entities;
 using TechStore.Services;
 
 namespace TechStore.Controllers
@@ -11,9 +13,12 @@ namespace TechStore.Controllers
     {
         private readonly ProductService _productService;
 
-        public ProductsController(ProductService productService)
+        private readonly ILogger<ProductsController> _logger; // Логгер для отладки
+
+        public ProductsController(ProductService productService, ILogger<ProductsController> logger)
         {
             _productService = productService;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -47,13 +52,40 @@ namespace TechStore.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ProductDto>> Update(int id, [FromBody] UpdateProductDto dto)
         {
-            var updatedProduct = await _productService.UpdateAsync(id, dto);
+            // add log
+            _logger.LogInformation("Запрос на обновление товара ID: {Id}. Новая картинка: {Url}", id, dto.ImageUrl);
 
-            if (updatedProduct == null)
-                return NotFound(new { Message = $"Продукт с ID {id} не найден" });
+            try
+            {
+                // Вызов сервиса
+                var updatedProduct = await _productService.UpdateAsync(id, dto);
+                //var updatedProduct = await _productService.UpdateAsync(id, dto);
 
-            return Ok(updatedProduct);
+                //if (updatedProduct == null)
+                //    return NotFound(new { Message = $"Продукт с ID {id} не найден" });
+
+                //return Ok(updatedProduct);
+
+                if (updatedProduct == null)
+                {
+                    _logger.LogWarning("Товар ID: {Id} не найден при попытке обновления", id);
+                    return NotFound(new { Message = $"Продукт с ID {id} не найден" });
+                }
+
+                return Ok(updatedProduct);
+            }
+
+            catch (Exception ex)
+            {
+
+                _logger.LogError(ex, "Ошибка при обновлении товара ID: {Id}", id);
+                return StatusCode(500, "Внутренняя ошибка сервера: " + ex.Message);
+            }
+
+            
         }
+
+
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")] // Только админ!

@@ -1,0 +1,83 @@
+﻿body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+header {
+    background-color: #221f1f;
+    color: white;
+    padding: 1rem 0;
+    margin-bottom: 20px;
+}
+
+header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Сетка товаров (Grid) */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* Адаптивные колонки */
+    gap: 20px;
+}
+
+/* Карточка товара */
+.product-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    transition: box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.product-image {
+    width: 100%;
+    height: 200px;
+    object-fit: contain; /* Чтобы картинка не обрезалась */
+    margin-bottom: 10px;
+}
+
+.product-title {
+    font-size: 16px;
+    color: #333;
+    margin: 0 0 10px 0;
+    flex-grow: 1; /* Растягивает название, чтобы кнопки были на одной линии */
+}
+
+.product-price {
+    font-size: 24px;
+    font-weight: bold;
+    color: #f84147; /* Красный цвет цены*/
+    margin-bottom: 15px;
+}
+
+.btn-buy {
+    background-color: #00a046; /* Зеленая кнопка */
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+}
+
+.btn-buy:hover {
+    background-color: #008a3c;
+}
