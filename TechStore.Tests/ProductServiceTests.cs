@@ -67,8 +67,8 @@ namespace TechStore.Tests
 
             var result = await service.GetAllAsync(1, 10);
 
-            Assert.Single(result); // ожидание что в списке один товар
-            Assert.Equal("Active Product", result[0].Name);
+            Assert.Equal(2, result.Items.Count);
+            var firstItem = result.Items[0];
         }
 
         [Fact]

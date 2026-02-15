@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TechStore.DTOs;
+using TechStore.Data;
 using TechStore.Entities;
 using TechStore.Services;
 
@@ -15,21 +16,29 @@ namespace TechStore.Controllers
 
         private readonly ILogger<ProductsController> _logger; // Логгер для отладки
 
-        public ProductsController(ProductService productService, ILogger<ProductsController> logger)
+        // для работы с файлами (картинками)
+        private readonly IWebHostEnvironment _appEnvironment;
+
+        public ProductsController(ProductService productService, ILogger<ProductsController> logger, IWebHostEnvironment appEnvironment)
         {
             _productService = productService;
             _logger = logger;
+            _appEnvironment = appEnvironment;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<ProductDto>>> GetAll([FromQuery] int page = 1, [FromQuery] int size = 10)
+        public async Task<ActionResult<PagedResult<ProductDto>>> GetAll(
+            [FromQuery] int page = 1,
+            [FromQuery] int size = 10,
+            [FromQuery] int? categoryId = null)
         {
             // Проверка правильности знч.
             if (page < 1) page = 1;
             if (size < 1 || size > 100) size = 10;
+            if (size > 50) size = 50;
 
-            var products = await _productService.GetAllAsync(page, size);
-            return Ok(products);
+            var result = await _productService.GetAllAsync(page, size, categoryId);
+            return Ok(result);
         }
 
         [HttpGet("{id}")]
@@ -42,29 +51,49 @@ namespace TechStore.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")] // Только админ!
-        public async Task<ActionResult<ProductDto>> Create([FromBody] CreateProductDto dto)
+        public async Task<ActionResult<ProductDto>> Create([FromForm] CreateProductDto dto)
         {
-            var product = await _productService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+            try
+            {
+                if (dto.Image != null)
+                {
+                    dto.ImageUrl = await SaveImage(dto.Image);
+                }
+
+                else
+                {
+                    // Если картинки нет, заглушка
+                    dto.ImageUrl = "/images/default.png";
+                }
+
+                var product = await _productService.CreateAsync(dto);
+                return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+            }
+
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при создании товара");
+                return StatusCode(500, "Ошибка сервера: " + ex.Message);
+            }
         }
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<ProductDto>> Update(int id, [FromBody] UpdateProductDto dto)
+        public async Task<ActionResult<ProductDto>> Update(int id, [FromForm] UpdateProductDto dto)
         {
             // add log
-            _logger.LogInformation("Запрос на обновление товара ID: {Id}. Новая картинка: {Url}", id, dto.ImageUrl);
+            _logger.LogInformation("Запрос на обновление товара ID: {Id}.", id);
 
             try
             {
+                if (dto.Image != null)
+                {
+                    dto.ImageUrl = await SaveImage(dto.Image);
+                }
+
                 // Вызов сервиса
                 var updatedProduct = await _productService.UpdateAsync(id, dto);
-                //var updatedProduct = await _productService.UpdateAsync(id, dto);
-
-                //if (updatedProduct == null)
-                //    return NotFound(new { Message = $"Продукт с ID {id} не найден" });
-
-                //return Ok(updatedProduct);
+                
 
                 if (updatedProduct == null)
                 {
@@ -86,7 +115,6 @@ namespace TechStore.Controllers
         }
 
 
-
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")] // Только админ!
         public async Task<IActionResult> Delete(int id)
@@ -94,6 +122,36 @@ namespace TechStore.Controllers
             var result = await _productService.DeleteAsync(id);
             if (!result) return NotFound();
             return NoContent();
+        }
+
+        // Вспомогательный метод для сохранения изображения
+        private async Task<string> SaveImage(IFormFile image)
+        {
+            // Создаем уникальное имя файла
+            string uniqueName = Guid.NewGuid().ToString() + "_" + image.FileName;
+
+            // Путь для сохранения (wwwroot/images)
+            string relativePath = "/images/products/" + uniqueName;
+
+            // Полный путь на сервере
+            string fullPath = _appEnvironment.WebRootPath + relativePath;
+
+            // Создаем папку, если ее нет
+            var directory = Path.GetDirectoryName(fullPath);
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            // Копируем файл
+            using (var stream = new FileStream(fullPath, FileMode.Create))
+            {
+                await image.CopyToAsync(stream);
+            }
+
+            // Возвращаем путь для сохранения в БД
+            return relativePath;
+
         }
     }
 }

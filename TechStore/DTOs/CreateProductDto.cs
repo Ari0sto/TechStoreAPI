@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
+
 namespace TechStore.DTOs
 {
     public class CreateProductDto
@@ -14,5 +16,12 @@ namespace TechStore.DTOs
 
         [Range(0, 10000)]
         public int Stock { get; set; }
+
+        public int CategoryId { get; set; }
+
+        public IFormFile? Image { get; set; }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string? ImageUrl { get; set; }
     }
 }

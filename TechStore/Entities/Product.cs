@@ -3,7 +3,7 @@
     public class Product
     {
         public int Id { get; set; }
-        public required string Name { get; set; }
+        public required string Name { get; set; } = string.Empty;
 
         public string? Description { get; set; } // string? - допуск. null значения
 
@@ -18,6 +18,10 @@
         public bool IsActive { get; set; } = true;
 
         // Ссылка на картинку
-        public string? ImageUrl { get; set; } 
+        public string? ImageUrl { get; set; }
+
+        // Категория товара
+        public int CategoryId { get; set; }
+        public Category? Category { get; set; }
     }
 }

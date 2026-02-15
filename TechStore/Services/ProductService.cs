@@ -17,9 +17,20 @@ namespace TechStore.Services
         }
 
         // получить все товары (для покупателей)
-        public async Task<List<ProductDto>> GetAllAsync(int pageNumber, int pageSize)
+        public async Task<PagedResult<ProductDto>> GetAllAsync(int pageNumber, int pageSize, int? categoryId = null)
         {
-            return await _context.Products
+            var query = _context.Products.AsQueryable();
+
+            if (categoryId.HasValue)
+            {
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+            }
+
+            int totalItems = await query.CountAsync();
+
+            var products = await query
+                .Include(p => p.Category)
+                .OrderByDescending(p => p.Id) // Сначала новые
                 .Where(p => !p.IsDeleted && p.IsActive) // filtered by SoftDelete
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -30,9 +41,19 @@ namespace TechStore.Services
                     Description = p.Description,
                     Price = p.Price,
                     Stock = p.Stock,
-                    ImageUrl = p.ImageUrl
+                    ImageUrl = p.ImageUrl,
+                    CategoryId = p.CategoryId,
+                    CategoryName = p.Category.Name
                 })
                 .ToListAsync();
+
+            return new PagedResult<ProductDto>
+            {
+                Items = products,
+                TotalItems = totalItems,
+                CurrentPage = pageNumber,
+                PageSize = pageSize
+            };
         }
 
         // получить только ОДИН товар
@@ -56,8 +77,8 @@ namespace TechStore.Services
         // создать товар (для АДМИНА)
         public async Task<ProductDto> CreateAsync(CreateProductDto dto)
         {
-            if (dto.Price < 0) throw new Exception("Цена не может быть отрицательной");
-            if (dto.Stock < 0) throw new Exception("Количество не может быть отрицательным");
+            if (dto.Price < 0) throw new ArgumentException("Цена не может быть отрицательной");
+            if (dto.Stock < 0) throw new ArgumentException("Количество не может быть отрицательным");
 
             var product = new Product
             {
@@ -65,6 +86,8 @@ namespace TechStore.Services
                 Description = dto.Description,
                 Price = dto.Price,
                 Stock = dto.Stock,
+                ImageUrl = dto.ImageUrl,
+                CategoryId = dto.CategoryId,
                 IsActive = true,
                 IsDeleted = false
             };
@@ -80,7 +103,8 @@ namespace TechStore.Services
                 Name = product.Name,
                 Description = product.Description,
                 Price = product.Price,
-                Stock = product.Stock
+                Stock = product.Stock,
+                ImageUrl = product.ImageUrl
             };
         }
 
@@ -92,6 +116,7 @@ namespace TechStore.Services
             
             var product = await _context.Products.FindAsync(id);
             if (product == null) return null;
+            if (dto.ImageUrl != null) product.ImageUrl = dto.ImageUrl;
 
             // обновляем поля
             product.Name = dto.Name;

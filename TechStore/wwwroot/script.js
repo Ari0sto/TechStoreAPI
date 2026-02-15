@@ -1,22 +1,92 @@
 ﻿const apiUrl = '/api/products';
-const grid = document.getElementById('products-grid');
+let userToken = ""; // Глобальный токен
 
-async function loadProducts() {
+// Глобал. переменные для пагинации
+let curretPage = 1;
+const pageSize = 8;
+let totalPages = 1;
+
+// Корзина
+let cart = [];
+
+// 1. Загрузка корзины при старте
+function loadCart() {
+    const savedCart = localStorage.getItem('techStoreCart');
+    if (savedCart) {
+        cart = JSON.parse(savedCart);
+        updateCartCount();
+    }
+}
+
+// 2. Добавление товара
+function addToCart(product) {
+    // Проверка есть ли уже такой товар
+    const existingItem = cart.find(item => item.id === product.id);
+    
+    if (existingItem) {
+        existingItem.quantity++;
+    } else {
+        cart.push({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            imageUrl: product.imageUrl,
+            quantity: 1
+        });
+    }
+    saveCart();
+    alert(`Товар "${product.name}" добавлен в корзину!`);
+}
+
+// 3. Сохранение корзины
+function saveCart() {
+    localStorage.setItem('techStoreCart', JSON.stringify(cart));
+    updateCartCount();
+}
+
+// 4. Обновление счетчика корзины
+function updateCartCount() {
+    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+    document.getElementById('cart-count').innerText = count;
+}
+
+// ЗАГРУЗКА ТОВАРОВ 
+async function loadProducts(page = 1) {
+    const grid = document.getElementById('products-grid');
+    const pageInfo = document.getElementById('page-info');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+
+    grid.innerHTML = '<p>Загрузка...</p>';
+
     try {
-        const response = await fetch(`${apiUrl}?pageNumber=1&pageSize=20`); 
+        const response = await fetch(`${apiUrl}?page=${page}&size=${pageSize}`);
+        if (!response.ok) throw new Error('Ошибка загрузки');
         
-        if (!response.ok) {
-            throw new Error('Ошибка загрузки данных');
-        }
-
         const data = await response.json();
-        
-        const products = data.items || data.products || data; 
 
-        renderProducts(products);
+        currentPage = data.currentPage;
+        totalPages = data.totalPages;
+
+        renderProducts(data.items);
+        pageInfo.innerText = `Стр. ${currentPage} из ${totalPages}`;
+        btnPrev.disabled = (currentPage === 1);
+        btnNext.disabled = (currentPage >= totalPages);
+
     } catch (error) {
         console.error(error);
         grid.innerHTML = '<p style="color:red">Не удалось загрузить товары.</p>';
+    }
+}
+
+// Переключение страниц
+function changePage(direction){
+    const newPage = currentPage + direction;
+
+    if (newPage > 0 && newPage <= totalPages) {
+        loadProducts(newPage);
+        // Плавный скролл наверх
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
@@ -24,171 +94,192 @@ function renderProducts(products) {
     const grid = document.getElementById('products-grid');
     grid.innerHTML = '';
 
-    console.log("Пример товара:", products[0]);
-
     products.forEach(product => {
         const card = document.createElement('div');
         card.className = 'product-card';
 
-        // 1. ПРОВЕРКА Если imageUrl == null ставим заглушку
+        // Формируем путь к картинке
         let imageSrc = product.imageUrl;
-        if (imageSrc === null || imageSrc === "") {
-            imageSrc = 'https://placehold.co/300x300/png?text=No+Image'; // заглушка
+        if (!imageSrc) {
+            imageSrc = 'https://placehold.co/300x300/png?text=No+Image';
         }
 
-        // Защита для названия
-        const name = product.name || 'Товар без названия';
+        const name = product.name || 'Товар';
         const price = product.price || 0;
 
+        const productData = JSON.stringify(product).replace(/"/g, '&quot;');
 
-    card.innerHTML = `
+        card.innerHTML = `
             <img src="${imageSrc}" alt="${name}" class="product-image">
             <h3 class="product-title">${name}</h3>
             <div class="product-price">${price} ₴</div>
-            
-            <button class="btn-buy" onclick="buyItem(${product.id || product.Id})">Купить</button>
 
-            <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
-            
-            <div style="display:flex; gap:5px;">
-                <input type="text" id="img-input-${product.id}" placeholder="Ссылка на фото" style="width: 100%; padding: 5px;">
-                <button onclick="updateImage(${product.id})" style="cursor:pointer;">💾</button>
-            </div>
+            <button class="btn-buy" onclick='addToCart(${productData})'>В корзину</button>
         `;
-
-        card.dataset.productJson = JSON.stringify(product);
-
         grid.appendChild(card);
     });
 }
 
-// Функция обновления картинки
-async function updateImage(id)
-{
-    const input = document.getElementById(`img-input-${id}`);
-    const newUrl = input.value;
+// ДОБАВЛЕНИЕ ТОВАРА
+document.getElementById('add-product-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
 
-    if (!newUrl) {
-        alert("Введите ссылку!");
+    if (!userToken) {
+        alert("Сначала войдите как админ!");
         return;
     }
 
-    const card = input.closest('.product-card'); 
-    const fullProductData = JSON.parse(card.dataset.productJson);
+    // FormData автоматически собирает все поля, включая <input type="file">
+    const formData = new FormData(this);
 
-    const cleanDto = {
-        Name: fullProductData.name || fullProductData.Name,
-        Price: fullProductData.price || fullProductData.Price,
-        Stock: fullProductData.stock || fullProductData.Stock,
-        Description: fullProductData.description || fullProductData.Description || "Описание отсутствует",
-        ImageUrl: newUrl,
-        IsActive: (fullProductData.isActive !== undefined) ? fullProductData.isActive : true
-    };
-
-    console.log("Отправляем на сервер:", cleanDto);
-
-    try{
-        const response = await fetch(`/api/products/${id}`, {
-            method: 'PUT',
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${userToken}`
+                'Authorization': `Bearer ${userToken}` 
             },
-            body: JSON.stringify(cleanDto)
+            body: formData
         });
 
         if (response.ok) {
-            alert("Картинка обновлена!");
-            location.reload(); // Перезагружаем страницу, чтобы увидеть результат
+            alert("Товар успешно создан!");
+            this.reset(); // Очистить форму
+            loadProducts(); // Обновить список
         } else {
-            const errorText = await response.text();
-            console.error("Ошибка сервера:", errorText);
-            alert(`Ошибка обновления: ${response.status} \nПосмотри консоль (F12)`);
+            const err = await response.text();
+            alert("Ошибка сервера: " + err);
         }
-
-        } catch (e) {
-        console.error(e);
+    } catch (error) {
+        console.error(error);
         alert("Ошибка сети");
     }
-    
+});
+
+// АВТОРИЗАЦИЯ
+
+// 1. Открытие/Закрытие модального окна
+function openLoginModal() {
+    document.getElementById('login-modal').style.display = 'block';
 }
 
-function addToCart(id) {
-    alert(`Товар ID ${id} добавлен в корзину (пока понарошку)`);
+function closeLoginModal() {
+    document.getElementById('login-modal').style.display = 'none';
+    document.getElementById('login-error').style.display = 'none';
 }
 
-// Запуск при загрузке страницы
-loadProducts();
+// Закрыть при клике вне окна
+window.onclick = function(event) {
+    const modal = document.getElementById('login-modal');
+    if (event.target == modal) closeLoginModal();
+}
 
-// (ТЕСТ) Быстрая авторизация для покупки
-// Глобальная переменная для токена
-let userToken = "";
+// 2. Обработка формы входа
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
 
-// 1. Функция входа (чтобы не делать форму регистрации)
-// сделать поля input email/password
-async function loginDemo() {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const errorMsg = document.getElementById('login-error');
+
     try {
         const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email: "Your email", 
-                password: "Your password"      
-            })
-        });
+            body: JSON.stringify({ email, password })
+    });
 
-        if (response.ok) {
-            const data = await response.json();
-            userToken = data.token; // Сохраняем токен в память
-            alert("Вы вошли в систему! Теперь можно покупать и редактировать.");
-            
-            const authPanel = document.getElementById('auth-panel');
-            if (authPanel) authPanel.innerHTML = '<span style="color: lightgreen;">Вы авторизованы ✅</span>';
-        } else {
-            alert("Ошибка входа. Проверьте логин/пароль в script.js");
+    if (response.ok) {
+        const data = await response.json();
+
+        // Сохранение токена
+        localStorage.setItem('techStoreToken', data.token);
+
+        localStorage.setItem('userRole', data.role);
+
+        alert("Успешный вход!");
+        closeLoginModal();
+        checkAuthStatus();
+
+    }else{
+        errorMsg.innerText = "Неверный логин или пароль";
+        errorMsg.style.display = 'block';
+    }
+    } catch (err) {
+        console.error(err);
+        errorMsg.innerText = "Ошибка сервера";
+        errorMsg.style.display = 'block';
+    }
+});
+
+// 3. Проверка статуса авторизации при загрузке страницы
+function checkAuthStatus() {
+    const token = localStorage.getItem('techStoreToken');
+    const authBtnContainer = document.getElementById('auth-status');
+    const adminPanel = document.getElementById('admin-panel');
+
+    // По умолчанию админка скрыта
+    if (adminPanel) adminPanel.style.display = 'none';
+
+    if (token) {
+        // 1. Декодируем токен
+        const decodedToken = parseJwt(token);
+        console.log("Содержимое токена:", decodedToken);
+
+        // 2. Ищем роль
+        const userRole = decodedToken["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] 
+                         || decodedToken["role"] 
+                         || "User";
+
+        // 3. Логика интерфейса
+        authBtnContainer.innerHTML = `
+            <span style="color: white; margin-right: 10px;">Привет, ${decodedToken.sub || decodedToken.email || "Гость"}!</span>
+            <button class="btn-login" onclick="logout()">Выйти</button>
+        `;
+
+        // 4. Показываем админку ТОЛЬКО если роль Admin
+        if (userRole === "Admin" && adminPanel) {
+            adminPanel.style.display = 'block';
         }
-    } catch (e) {
-        console.error(e);
-        alert("Сервер недоступен");
+
+        userToken = token;
+    } else {
+        // гость
+        authBtnContainer.innerHTML = `
+            <button class="btn-login" onclick="openLoginModal()">Войти</button>
+        `;
+        userToken = "";
     }
 }
 
-// 2. Функция покупки
-async function buyItem(productId) {
-    if (!userToken) {
-        const doLogin = confirm("Для покупки нужно войти. Войти как тест-юзер?");
-        if (doLogin) await loginDemo();
-        else return;
-    }
+// 4. Выход
+function logout() {
+    localStorage.removeItem('techStoreToken');
+    checkAuthStatus();
+    alert("Вы вышли из системы");
+}
 
-    if (!userToken) return; // Если так и не вошли
 
+// ПОКУПКА (Заглушка)
+function buyItem(id) {
+    alert(`Товар ID ${id} добавлен в корзину!`);
+}
+
+// Парс JWT для получения роли
+function parseJwt(token) {
     try {
-        const orderData = {
-            items: [
-                { productId: productId, quantity: 1 } // Покупаем 1 штуку
-            ]
-        };
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
 
-        const response = await fetch('/api/orders', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${userToken}` // ВАЖНО! Шлем токен
-            },
-            body: JSON.stringify(orderData)
-        });
-
-        if (response.ok) {
-            alert(`Ура! Товар ID ${productId} куплен! Склад обновлен.`);
-            
-            loadProducts();
-        } else {
-            const err = await response.text();
-            alert("Ошибка покупки: " + err);
-        }
+        return JSON.parse(jsonPayload);
     } catch (e) {
-        console.error(e);
-        alert("Ошибка сети");
+        return null;
     }
 }
+
+// Старт
+loadProducts();
+checkAuthStatus();
+loadCart();

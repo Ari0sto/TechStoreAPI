@@ -18,6 +18,11 @@ namespace TechStore.DTOs
         public bool IsActive { get; set; } = true;
         public bool IsDeleted { get; set; }
 
+        public int CategoryId { get; set; }
+
+        public IFormFile? Image { get; set; }
+
+        [System.Text.Json.Serialization.JsonIgnore]
         public string? ImageUrl { get; set; }
     }
 }
