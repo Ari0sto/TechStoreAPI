@@ -11,17 +11,32 @@
     padding: 0 15px;
 }
 
-header {
+/* header {
     background-color: #221f1f;
     color: white;
     padding: 1rem 0;
     margin-bottom: 20px;
+} */
+
+header {
+    background-color: #333;
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 header .container {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
 }
 
 /* Сетка товаров (Grid) */
@@ -226,6 +241,7 @@ header .container {
     font-size: 16px;
     display: flex;
     align-items: center;
+    margin-right: 0 !important;
 }
 
 /* Бейдж с количеством товаров в корзине */
@@ -240,3 +256,148 @@ header .container {
     font-size: 12px;
     font-weight: bold;
 }
+
+/* Модалка корзины */
+.cart-modal-content {
+    width: 600px;
+    max-width: 90%;
+    text-align: left;
+}
+
+/* Элемент товара в корзине */
+.cart-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.cart-item img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    margin-right: 15px;
+}
+
+.cart-item-info {
+    flex-grow: 1;
+}
+
+.cart-item-title {
+    font-weight: bold;
+    font-size: 14px;
+    margin: 0;
+}
+
+/* Кнопки количества */
+.qty-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 15px;
+}
+
+.btn-qty {
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-qty:hover {
+    background: #e0e0e0;
+}
+
+/* Кнопка удаления (мусорка) */
+.btn-remove {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.btn-remove:hover {
+    color: red;
+}
+
+.cart-footer {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 2px solid #eee;
+}
+
+.cart-total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.total-price {
+    color: #f84147;
+}
+
+/* --- АДМИНКА --- */
+.admin-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: #e0e0e0;
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.tab-btn.active {
+    background: #00a046;
+    color: white;
+}
+
+/* Таблицы */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.admin-table th, .admin-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+.admin-table th {
+    background-color: #f4f4f4;
+}
+
+.admin-table img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+}
+
+/* Маленькие кнопки действий */
+.btn-action {
+    padding: 5px 10px;
+    margin-right: 5px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+.btn-edit { background: #ffc107; }
+.btn-delete { background: #f84147; color: white; }
+.btn-save { background: #00a046; color: white; }

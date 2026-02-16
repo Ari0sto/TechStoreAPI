@@ -138,6 +138,7 @@ namespace TechStore.Services
                 OrderDate = order.OrderDate,
                 TotalAmount = order.TotalAmount,
                 Status = order.Status.ToString(),
+                UserId = order.UserId,
                 Items = order.Items.Select(i => new OrderItemDto
                 {
                     ProductId = i.ProductId,

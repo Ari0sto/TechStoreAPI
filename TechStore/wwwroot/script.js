@@ -50,6 +50,153 @@ function updateCartCount() {
     document.getElementById('cart-count').innerText = count;
 }
 
+// 5. Открыть корзину
+function openCart() {
+    renderCartItems(); // Перерисовать список перед открытием
+    document.getElementById('cart-modal').style.display = 'block';
+}
+
+// 6. Закрыть корзину
+function closeCart() {
+    document.getElementById('cart-modal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('cart-modal');
+    if (event.target == modal) closeCart();
+    
+    // Для логина (чтобы не сломать старое)
+    const loginModal = document.getElementById('login-modal');
+    if (event.target == loginModal) closeLoginModal();
+}
+
+// 7. Рендер товаров в корзине
+function renderCartItems() {
+    const container = document.getElementById('cart-items-container');
+    const totalElem = document.getElementById('cart-total-price');
+    
+    container.innerHTML = ''; // Очищаем старое
+    let totalPrice = 0;
+
+    if (cart.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding: 20px;">Ваша корзина пуста 😔</p>';
+        totalElem.innerText = '0 ₴';
+        return;
+    }
+
+    cart.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        totalPrice += itemTotal;
+
+        const div = document.createElement('div');
+        div.className = 'cart-item';
+        div.innerHTML = `
+            <img src="${item.imageUrl}" alt="photo">
+            
+            <div class="cart-item-info">
+                <p class="cart-item-title">${item.name}</p>
+                <small>${item.price} ₴ / шт.</small>
+            </div>
+
+            <div class="qty-controls">
+                <button class="btn-qty" onclick="changeQty(${item.id}, -1)">-</button>
+                <span>${item.quantity}</span>
+                <button class="btn-qty" onclick="changeQty(${item.id}, 1)">+</button>
+            </div>
+
+            <div style="font-weight:bold; min-width: 80px; text-align:right;">
+                ${itemTotal} ₴
+            </div>
+
+            <button class="btn-remove" onclick="removeFromCart(${item.id})" title="Удалить">🗑</button>
+        `;
+        container.appendChild(div);
+    });
+
+    totalElem.innerText = totalPrice + ' ₴';
+}
+
+// 8. Изменение количества
+function changeQty(id, change) {
+    const item = cart.find(x => x.id === id);
+    if (!item) return;
+
+    item.quantity += change;
+
+    // Если стало 0 то удаляем
+    if (item.quantity <= 0) {
+        removeFromCart(id);
+        return; 
+    }
+
+    saveCart(); // Сохраняем в localStorage
+    renderCartItems(); // Перерисовываем (чтобы обновилась цена и цифра)
+}
+
+// 9. Удаление из корзины
+function removeFromCart(id) {
+    cart = cart.filter(x => x.id !== id);
+    saveCart();
+    renderCartItems();
+}
+
+// 10 Оформление заказа
+async function checkout() {
+    if (cart.length === 0) {
+        alert("Корзина пуста!");
+        return;
+    }
+    
+    // Проверка авторизации
+    if (!userToken) {
+        alert("Для оформления заказа нужно войти!");
+        closeCart();
+        openLoginModal();
+        return;
+    }
+
+    // Подготовка данных для сервера
+    const orderData = {
+        Items: cart.map(item => ({
+            ProductId: item.id,
+            Quantity: item.quantity
+        }))
+    };
+
+    try {
+        // Отправка запроса на сервер
+        const response = await fetch('/api/orders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${userToken}`
+            },
+            body: JSON.stringify(orderData)
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            
+            // Успех!
+            alert(`Заказ №${result.id} успешно оформлен!`);
+            
+            // Очистка корзины
+            cart = [];
+            saveCart();       // Очистит localStorage
+            renderCartItems(); // Очистит вид
+            closeCart();      // Закроет окно
+            
+        }else{
+            const errorText = await response.text();
+            console.error("Ошибка сервера:", errorText);
+            alert("Ошибка оформления: " + errorText);
+        }
+        } catch (e) {
+        console.error(e);
+        alert("Ошибка сети. Проверьте консоль.");
+    }
+}
+
 // ЗАГРУЗКА ТОВАРОВ 
 async function loadProducts(page = 1) {
     const grid = document.getElementById('products-grid');
@@ -119,41 +266,6 @@ function renderProducts(products) {
         grid.appendChild(card);
     });
 }
-
-// ДОБАВЛЕНИЕ ТОВАРА
-document.getElementById('add-product-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    if (!userToken) {
-        alert("Сначала войдите как админ!");
-        return;
-    }
-
-    // FormData автоматически собирает все поля, включая <input type="file">
-    const formData = new FormData(this);
-
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${userToken}` 
-            },
-            body: formData
-        });
-
-        if (response.ok) {
-            alert("Товар успешно создан!");
-            this.reset(); // Очистить форму
-            loadProducts(); // Обновить список
-        } else {
-            const err = await response.text();
-            alert("Ошибка сервера: " + err);
-        }
-    } catch (error) {
-        console.error(error);
-        alert("Ошибка сети");
-    }
-});
 
 // АВТОРИЗАЦИЯ
 
@@ -259,7 +371,7 @@ function logout() {
 }
 
 
-// ПОКУПКА (Заглушка)
+// ПОКУПКА
 function buyItem(id) {
     alert(`Товар ID ${id} добавлен в корзину!`);
 }
@@ -278,6 +390,269 @@ function parseJwt(token) {
         return null;
     }
 }
+
+// АДМИН ПАНЕЛЬ: ВКЛАДКИ 
+
+function showAdminTab(tabName) {
+    // 1. Скрываем все вкладки
+    document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+    // 2. Показываем нужную
+    document.getElementById(`tab-${tabName}`).style.display = 'block';
+    
+    // Загружаем данные для вкладки
+    if (tabName === 'products') loadAdminProducts();
+    if (tabName === 'orders') loadAdminOrders();
+    if (tabName === 'users') loadAdminUsers();
+}
+
+function closeAdminPanel() {
+    document.getElementById('admin-panel').style.display = 'none';
+}
+
+// АДМИН: ПОЛЬЗОВАТЕЛИ
+async function loadAdminUsers() {
+    const tbody = document.getElementById('admin-users-table');
+    tbody.innerHTML = '<tr><td colspan="3">Загрузка...</td></tr>';
+
+    try {
+        const response = await fetch('/api/users', {
+            headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+
+        if (response.ok) {
+            const users = await response.json();
+            tbody.innerHTML = ''; // Очистить
+            
+            users.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><small>${u.id}</small></td>
+                    <td>${u.email}</td>
+                    <td>${u.userName}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="3" style="color:red">Ошибка доступа</td></tr>';
+        }
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="3" style="color:red">Ошибка сети</td></tr>';
+    }
+}
+
+// АДМИН: ТОВАРЫ
+async function loadAdminProducts() {
+    const tbody = document.getElementById('admin-products-table');
+    tbody.innerHTML = '<tr><td colspan="6">Загрузка...</td></tr>';
+
+    try {
+        // Загружаем сразу много товаров (size=100), чтобы админ видел всё
+        const response = await fetch('/api/products?size=100');
+        const data = await response.json();
+        
+        tbody.innerHTML = ''; // Очистка
+
+        data.items.forEach(p => {
+            // Экранируем данные для передачи в кнопку
+            const productJson = JSON.stringify(p).replace(/"/g, '&quot;');
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${p.id}</td>
+                <td><img src="${p.imageUrl || ''}" alt="img" style="width:40px"></td>
+                <td>${p.name}</td>
+                <td>${p.price} ₴</td>
+                <td>${p.stock}</td>
+                <td>
+                    <button class="btn-action btn-edit" onclick='openEditProductModal(${productJson})'>✏️</button>
+                    <button class="btn-action btn-delete" onclick="deleteProduct(${p.id})">🗑</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="6" style="color:red">Ошибка сети</td></tr>';
+    }
+}
+
+// АДМИН: УДАЛЕНИЕ
+async function deleteProduct(id) {
+    if (!confirm("Вы точно хотите удалить этот товар?")) return;
+
+    try {
+        const response = await fetch(`${apiUrl}/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+
+        if (response.ok) {
+            // Удаляем строку из таблицы визуально
+            loadAdminProducts();
+        } else {
+            alert("Ошибка удаления");
+        }
+    } catch (e) {
+        alert("Ошибка сети");
+    }
+}
+
+// АДМИН: РЕДАКТИРОВАНИЕ И СОЗДАНИЕ
+
+// 1. Открыть модалку для СОЗДАНИЯ
+function openAddProductModal() {
+    document.getElementById('product-form').reset(); // Очистить форму
+    document.getElementById('prod-id').value = ''; // Убрать ID
+    document.getElementById('modal-product-title').innerText = "Новый товар";
+    document.getElementById('product-modal').style.display = 'block';
+}
+
+// 2. Открыть модалку для РЕДАКТИРОВАНИЯ
+function openEditProductModal(product) {
+    // Заполняем поля данными из товара
+    document.getElementById('prod-id').value = product.id;
+    document.getElementById('prod-name').value = product.name;
+    document.getElementById('prod-price').value = product.price;
+    document.getElementById('prod-stock').value = product.stock;
+    document.getElementById('prod-desc').value = product.description || "";
+    document.getElementById('prod-cat').value = product.categoryId;
+    
+    document.getElementById('modal-product-title').innerText = "Редактирование товара";
+    document.getElementById('product-modal').style.display = 'block';
+}
+
+function closeProductModal() {
+    document.getElementById('product-modal').style.display = 'none';
+}
+
+// 3. ОБРАБОТКА СОХРАНЕНИЯ (ЕДИНАЯ ФУНКЦИЯ)
+document.getElementById('product-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('prod-id').value;
+    const formData = new FormData(this); // Собирает файлы и поля
+
+    // Определяем: это создание или обновление?
+    const isEdit = !!id; 
+    const url = isEdit ? `${apiUrl}/${id}` : apiUrl;
+    const method = isEdit ? 'PUT' : 'POST';
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Authorization': `Bearer ${userToken}`
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            alert(isEdit ? "Товар обновлен!" : "Товар создан!");
+            closeProductModal();
+            loadAdminProducts(); // Обновить таблицу в админке
+            loadProducts();      // Обновить каталог на главной (если надо)
+        } else {
+            const err = await response.text();
+            alert("Ошибка: " + err);
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Ошибка сети");
+    }
+});
+
+// АДМИН: ЗАКАЗЫ
+
+async function loadAdminOrders() {
+    const tbody = document.getElementById('admin-orders-table');
+    tbody.innerHTML = '<tr><td colspan="6">Загрузка...</td></tr>';
+
+    try {
+        const response = await fetch('/api/orders', { // Этот метод только для админа
+            headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+
+        if (response.ok) {
+            const orders = await response.json();
+            tbody.innerHTML = ''; // Очистка
+
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6">Нет заказов</td></tr>';
+                return;
+            }
+
+            orders.forEach(order => {
+                const tr = document.createElement('tr');
+                
+                // Красивая дата
+                const date = new Date(order.orderDate).toLocaleString();
+
+                // Генерация выпадающего списка для статуса
+                // Проверка, какой статус сейчас, чтобы добавить атрибут 'selected'
+                const statuses = ['Created', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+                let optionsHtml = '';
+                
+                statuses.forEach(s => {
+                    const isSelected = (order.status === s) ? 'selected' : '';
+                    optionsHtml += `<option value="${s}" ${isSelected}>${s}</option>`;
+                });
+
+                tr.innerHTML = `
+                    <td>${order.id}</td>
+                    <td>${date}</td>
+                    <td><small>${order.userId || 'Гость'}</small></td>
+                    <td><strong>${order.totalAmount} ₴</strong></td>
+                    <td>
+                        <select onchange="updateOrderStatus(${order.id}, this.value)" style="padding:5px;">
+                            ${optionsHtml}
+                        </select>
+                    </td>
+                    <td>
+                        <button class="btn-action" onclick="alert('Детали заказа №${order.id}: ' + JSON.stringify('${order.items.length} поз.'))">ℹ️ Инфо</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" style="color:red">Ошибка доступа</td></tr>';
+        }
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="6" style="color:red">Ошибка сети</td></tr>';
+    }
+}
+
+// АДМИН: ОБНОВЛЕНИЕ СТАТУСА
+async function updateOrderStatus(orderId, newStatus) {
+    
+    try {
+        const response = await fetch(`/api/orders/${orderId}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${userToken}`
+            },
+            
+            body: JSON.stringify(newStatus)
+        });
+
+        if (response.ok) {
+            console.log(`Заказ ${orderId} обновлен на ${newStatus}`);
+        } else {
+            alert("Не удалось обновить статус. Возможно, заказ уже закрыт.");
+            loadAdminOrders(); // Вернуть как было
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Ошибка сети");
+    }
+}
+
 
 // Старт
 loadProducts();
