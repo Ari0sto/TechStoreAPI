@@ -5,6 +5,7 @@ using TechStore.DTOs;
 using TechStore.Data;
 using TechStore.Entities;
 using TechStore.Services;
+using System.Security.Claims;
 
 namespace TechStore.Controllers
 {
@@ -19,11 +20,15 @@ namespace TechStore.Controllers
         // для работы с файлами (картинками)
         private readonly IWebHostEnvironment _appEnvironment;
 
-        public ProductsController(ProductService productService, ILogger<ProductsController> logger, IWebHostEnvironment appEnvironment)
+        // log service
+        private readonly ActionLogService _logService;
+
+        public ProductsController(ProductService productService, ILogger<ProductsController> logger, IWebHostEnvironment appEnvironment, ActionLogService logService)
         {
             _productService = productService;
             _logger = logger;
             _appEnvironment = appEnvironment;
+            _logService = logService;
         }
 
         [HttpGet]
@@ -67,6 +72,11 @@ namespace TechStore.Controllers
                 }
 
                 var product = await _productService.CreateAsync(dto);
+
+                var email = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity.Name;
+                await _logService.LogActionAsync(email, "Created", "Product", product.Id.ToString(), $"Name: {product.Name}, Price: {product.Price}");
+                
+
                 return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
             }
 
@@ -101,6 +111,9 @@ namespace TechStore.Controllers
                     return NotFound(new { Message = $"Продукт с ID {id} не найден" });
                 }
 
+                var email = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity.Name;
+                await _logService.LogActionAsync(email, "Updated", "Product", id.ToString(), $"Updated Name: {dto.Name}, Price: {dto.Price}");
+
                 return Ok(updatedProduct);
             }
 
@@ -121,6 +134,10 @@ namespace TechStore.Controllers
         {
             var result = await _productService.DeleteAsync(id);
             if (!result) return NotFound();
+
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity.Name;
+            await _logService.LogActionAsync(email, "Deleted", "Product", id.ToString(), "Soft deleted product");
+
             return NoContent();
         }
 

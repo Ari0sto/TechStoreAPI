@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Security.Claims;
 using TechStore.Controllers;
 using TechStore.Data;
 using TechStore.DTOs;
 using TechStore.Services;
 using Xunit;
+using Microsoft.AspNetCore.Http;
 
 namespace TechStore.Tests
 {
@@ -39,7 +41,9 @@ namespace TechStore.Tests
 
             var service = new ProductService(context);
 
-            var controller = new ProductsController(service, null, null);
+            var logService = new ActionLogService(context);
+
+            var controller = new ProductsController(service, null, null, logService);
 
             var result = await controller.GetById(product.Id);
 
@@ -54,7 +58,9 @@ namespace TechStore.Tests
             var context = GetInMemoryDbContext();
             var service = new ProductService(context);
 
-            var controller = new ProductsController(service, null, null);
+            var logService = new ActionLogService(context);
+
+            var controller = new ProductsController(service, null, null, logService);
 
             var result = await controller.GetById(999);
 
@@ -72,7 +78,21 @@ namespace TechStore.Tests
 
             var service = new ProductService(context);
 
-            var controller = new ProductsController(service, null, null);
+            var logService = new ActionLogService(context);
+
+            var controller = new ProductsController(service, null, null, logService);
+
+            var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, "AdminId"),
+                new Claim(ClaimTypes.Email, "admin@test.com"),
+                new Claim(ClaimTypes.Role, "Admin")
+            }, "mock"));
+
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = user }
+            };
 
             var newProduct = new CreateProductDto
             {

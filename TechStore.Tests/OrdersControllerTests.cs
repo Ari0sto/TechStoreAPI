@@ -47,7 +47,10 @@ namespace TechStore.Tests
             await context.SaveChangesAsync();
 
             var service = new OrderService(context);
-            var controller = new OrdersController(service);
+
+            var logService = new ActionLogService(context);
+
+            var controller = new OrdersController(service, logService);
 
             // ВАЖНО!
             // "Входим" как пользователь "User1" - customer
@@ -81,7 +84,10 @@ namespace TechStore.Tests
             await context.SaveChangesAsync();
 
             var service = new OrderService(context);
-            var controller = new OrdersController(service);
+
+            var logService = new ActionLogService(context);
+
+            var controller = new OrdersController(service, logService);
 
             // Вход как "Me"
             SetupControllerWithUser(controller, "Me", "Customer");
@@ -95,6 +101,7 @@ namespace TechStore.Tests
             Assert.Equal(500, orders[0].TotalAmount); // И это должен быть заказ на 500
         }
 
+        [Fact]
         public async Task UpdateStatus_Should_Work_For_Admin()
         {
             var context = GetInMemoryDbContext();
@@ -103,7 +110,10 @@ namespace TechStore.Tests
             await context.SaveChangesAsync();
 
             var service = new OrderService(context);
-            var controller = new OrdersController(service);
+
+            var logService = new ActionLogService(context);
+
+            var controller = new OrdersController(service, logService);
 
             // Вход как "Admin"
             SetupControllerWithUser(controller, "AdminUser", "Admin");

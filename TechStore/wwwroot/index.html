@@ -43,6 +43,7 @@
     </div>
 
     <div class="admin-tabs">
+        <button id="btn-tab-logs" class="tab-btn" onclick="showAdminTab('logs')" style="display:none;">📜 Логи действий</button>
         <button class="tab-btn active" onclick="showAdminTab('products')">📦 Товары</button>
         <button class="tab-btn" onclick="showAdminTab('orders')">📧 Заказы</button>
         <button class="tab-btn" onclick="showAdminTab('users')">👥 Пользователи</button>
@@ -96,6 +97,24 @@
             <tbody id="admin-users-table"></tbody>
         </table>
     </div>
+
+    <div id="tab-logs" class="admin-tab-content" style="display:none;">
+        <button class="btn-primary" onclick="loadSystemLogs()" style="margin-bottom:15px;">🔄 Обновить</button>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Админ</th>
+                    <th>Действие</th>
+                    <th>Сущность</th>
+                    <th>ID</th>
+                    <th>Детали</th>
+                </tr>
+            </thead>
+            <tbody id="admin-logs-table"></tbody>
+        </table>
+    </div>
+
 </div>
 
         <h2>Каталог товаров</h2>

@@ -16,6 +16,8 @@ namespace TechStore.Data
 
         public DbSet<OrderItem> OrderItems { get; set; }
 
+        public DbSet<ActionLog> ActionLogs { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -33,4 +35,6 @@ namespace TechStore.Data
             builder.Entity<OrderItem>().Property(oi => oi.UnitPrice).HasColumnType("decimal(18,2)");
         }
     }
+
+
 }

@@ -12,10 +12,12 @@ namespace TechStore.Controllers
     public class OrdersController : ControllerBase
     {
         private readonly OrderService _orderService;
+        private readonly ActionLogService _logService;
 
-        public OrdersController(OrderService orderService)
+        public OrdersController(OrderService orderService, ActionLogService logService)
         {
             _orderService = orderService;
+            _logService = logService;
         }
 
         [HttpPost]
@@ -56,6 +58,9 @@ namespace TechStore.Controllers
         {
             var result = await _orderService.UpdateStatusAsync(id, status);
             if (!result) return BadRequest("Неправильный статус заказа, или он не найден");
+
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity.Name;
+            await _logService.LogActionAsync(email, "StatusChanged", "Order", id.ToString(), $"New Status: {status}");
 
             return NoContent();
         }

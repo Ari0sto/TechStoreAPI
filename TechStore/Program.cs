@@ -21,6 +21,7 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>()
 // Регистрация своих сервисов
 builder.Services.AddScoped<TechStore.Services.ProductService>();
 builder.Services.AddScoped<TechStore.Services.OrderService>();
+builder.Services.AddScoped<TechStore.Services.ActionLogService>();
 
 // 3) JWT-Tokens
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

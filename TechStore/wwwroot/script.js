@@ -2,7 +2,7 @@
 let userToken = ""; // Глобальный токен
 
 // Глобал. переменные для пагинации
-let curretPage = 1;
+let currentPage = 1;
 const pageSize = 8;
 let totalPages = 1;
 
@@ -186,12 +186,12 @@ async function checkout() {
             renderCartItems(); // Очистит вид
             closeCart();      // Закроет окно
             
-        }else{
+        } else {
             const errorText = await response.text();
             console.error("Ошибка сервера:", errorText);
             alert("Ошибка оформления: " + errorText);
         }
-        } catch (e) {
+    } catch (e) {
         console.error(e);
         alert("Ошибка сети. Проверьте консоль.");
     }
@@ -204,6 +204,7 @@ async function loadProducts(page = 1) {
     const btnPrev = document.getElementById('btn-prev');
     const btnNext = document.getElementById('btn-next');
 
+    // Очистка перед загрузкой
     grid.innerHTML = '<p>Загрузка...</p>';
 
     try {
@@ -279,12 +280,6 @@ function closeLoginModal() {
     document.getElementById('login-error').style.display = 'none';
 }
 
-// Закрыть при клике вне окна
-window.onclick = function(event) {
-    const modal = document.getElementById('login-modal');
-    if (event.target == modal) closeLoginModal();
-}
-
 // 2. Обработка формы входа
 document.getElementById('login-form').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -298,24 +293,22 @@ document.getElementById('login-form').addEventListener('submit', async function(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
-    });
+        });
 
-    if (response.ok) {
-        const data = await response.json();
+        if (response.ok) {
+            const data = await response.json();
 
-        // Сохранение токена
-        localStorage.setItem('techStoreToken', data.token);
+            // Сохранение токена
+            localStorage.setItem('techStoreToken', data.token);
 
-        localStorage.setItem('userRole', data.role);
+            alert("Успешный вход!");
+            closeLoginModal();
+            checkAuthStatus();
 
-        alert("Успешный вход!");
-        closeLoginModal();
-        checkAuthStatus();
-
-    }else{
-        errorMsg.innerText = "Неверный логин или пароль";
-        errorMsg.style.display = 'block';
-    }
+        } else {
+            errorMsg.innerText = "Неверный логин или пароль";
+            errorMsg.style.display = 'block';
+        }
     } catch (err) {
         console.error(err);
         errorMsg.innerText = "Ошибка сервера";
@@ -331,31 +324,49 @@ function checkAuthStatus() {
 
     // По умолчанию админка скрыта
     if (adminPanel) adminPanel.style.display = 'none';
+    const logsBtn = document.getElementById('btn-tab-logs');
+    if (logsBtn) logsBtn.style.display = 'none';
 
     if (token) {
         // 1. Декодируем токен
         const decodedToken = parseJwt(token);
-        console.log("Содержимое токена:", decodedToken);
+        console.log("Токен:", decodedToken);
 
-        // 2. Ищем роль
-        const userRole = decodedToken["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] 
-                         || decodedToken["role"] 
-                         || "User";
+        // 2. Достаем роль (или массив ролей)
+        let roleData = decodedToken["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] 
+                       || decodedToken["role"] 
+                       || "User";
 
-        // 3. Логика интерфейса
+        // 3. Превращаем в массив, если это строка (чтобы код был универсальным)
+        const userRoles = Array.isArray(roleData) ? roleData : [roleData];
+        
+        console.log("Роли пользователя:", userRoles);
+
+        // 4. Логика интерфейса
+        const username = decodedToken.sub || decodedToken.email || decodedToken["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || "Гость";
+        
         authBtnContainer.innerHTML = `
-            <span style="color: white; margin-right: 10px;">Привет, ${decodedToken.sub || decodedToken.email || "Гость"}!</span>
+            <span style="color: white; margin-right: 10px;">Привет, ${username}!</span>
             <button class="btn-login" onclick="logout()">Выйти</button>
         `;
 
-        // 4. Показываем админку ТОЛЬКО если роль Admin
-        if (userRole === "Admin" && adminPanel) {
+        // 5. Проверки (используем .includes, так как теперь у нас всегда массив)
+        const isAdmin = userRoles.includes("Admin");
+        const isOwner = userRoles.includes("BusinessOwner");
+
+        // Показываем панель, если есть хоть одна крутая роль
+        if ((isAdmin || isOwner) && adminPanel) {
             adminPanel.style.display = 'block';
         }
 
+        // Показываем кнопку логов ТОЛЬКО Владельцу
+        if (logsBtn && isOwner) {
+            logsBtn.style.display = 'inline-block';
+        }
+        
         userToken = token;
     } else {
-        // гость
+        // Гость
         authBtnContainer.innerHTML = `
             <button class="btn-login" onclick="openLoginModal()">Войти</button>
         `;
@@ -371,7 +382,7 @@ function logout() {
 }
 
 
-// ПОКУПКА
+// ПОКУПКА (Уже не нужна, есть addToCart)
 function buyItem(id) {
     alert(`Товар ID ${id} добавлен в корзину!`);
 }
@@ -399,12 +410,14 @@ function showAdminTab(tabName) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
 
     // 2. Показываем нужную
-    document.getElementById(`tab-${tabName}`).style.display = 'block';
+    const activeTab = document.getElementById(`tab-${tabName}`);
+    if (activeTab) activeTab.style.display = 'block';
     
     // Загружаем данные для вкладки
     if (tabName === 'products') loadAdminProducts();
     if (tabName === 'orders') loadAdminOrders();
     if (tabName === 'users') loadAdminUsers();
+    if (tabName === 'logs') loadSystemLogs();
 }
 
 function closeAdminPanel() {
@@ -554,7 +567,7 @@ document.getElementById('product-form').addEventListener('submit', async functio
             alert(isEdit ? "Товар обновлен!" : "Товар создан!");
             closeProductModal();
             loadAdminProducts(); // Обновить таблицу в админке
-            loadProducts();      // Обновить каталог на главной (если надо)
+            loadProducts();      // Обновить каталог на главной
         } else {
             const err = await response.text();
             alert("Ошибка: " + err);
@@ -653,6 +666,52 @@ async function updateOrderStatus(orderId, newStatus) {
     }
 }
 
+// ВЛАДЕЛЕЦ: ЛОГИ
+async function loadSystemLogs() {
+    const tbody = document.getElementById('admin-logs-table');
+    tbody.innerHTML = '<tr><td colspan="6">Загрузка...</td></tr>';
+
+    try {
+        const response = await fetch('/api/logs', {
+            headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+
+        if (response.ok) {
+            const logs = await response.json();
+            tbody.innerHTML = ''; 
+
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6">Логов пока нет</td></tr>';
+                return;
+            }
+
+            logs.forEach(log => {
+                const tr = document.createElement('tr');
+                const date = new Date(log.timestamp).toLocaleString();
+                
+                let color = 'black';
+                if (log.action === 'Deleted') color = 'red';
+                if (log.action === 'Created') color = 'green';
+                if (log.action === 'Updated') color = 'orange';
+
+                tr.innerHTML = `
+                    <td><small>${date}</small></td>
+                    <td>${log.adminEmail}</td>
+                    <td style="color:${color}; font-weight:bold;">${log.action}</td>
+                    <td>${log.entityName}</td>
+                    <td>${log.entityId}</td>
+                    <td><small>${log.details}</small></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" style="color:red">Доступ запрещен (Нужны права Владельца)</td></tr>';
+        }
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="6" style="color:red">Ошибка сети</td></tr>';
+    }
+}
 
 // Старт
 loadProducts();
