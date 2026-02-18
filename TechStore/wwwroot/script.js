@@ -204,17 +204,42 @@ async function loadProducts(page = 1) {
     const btnPrev = document.getElementById('btn-prev');
     const btnNext = document.getElementById('btn-next');
 
+    const searchInput = document.getElementById('search-input');
+    const categorySelect = document.getElementById('category-filter');
+    
+    const searchValue = searchInput ? searchInput.value : '';
+    const categoryValue = categorySelect ? categorySelect.value : '';
+
     // Очистка перед загрузкой
     grid.innerHTML = '<p>Загрузка...</p>';
 
     try {
-        const response = await fetch(`${apiUrl}?page=${page}&size=${pageSize}`);
+
+        let url = `${apiUrl}?page=${page}&size=${pageSize}`;
+        
+        if (searchValue) {
+            url += `&search=${encodeURIComponent(searchValue)}`;
+        }
+        if (categoryValue) {
+            url += `&categoryId=${categoryValue}`;
+        }
+
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Ошибка загрузки');
         
         const data = await response.json();
 
         currentPage = data.currentPage;
         totalPages = data.totalPages;
+
+        // Если товаров нет
+        if (data.items.length === 0) {
+            grid.innerHTML = '<p>Ничего не найдено 🤷‍♂️</p>';
+            pageInfo.innerText = '-';
+            btnPrev.disabled = true;
+            btnNext.disabled = true;
+            return;
+        }
 
         renderProducts(data.items);
         pageInfo.innerText = `Стр. ${currentPage} из ${totalPages}`;
@@ -225,6 +250,12 @@ async function loadProducts(page = 1) {
         console.error(error);
         grid.innerHTML = '<p style="color:red">Не удалось загрузить товары.</p>';
     }
+}
+
+// Поиск
+function applyFilters() {
+    // При поиске всегда сброс на 1 страницу
+    loadProducts(1);
 }
 
 // Переключение страниц
@@ -316,63 +347,74 @@ document.getElementById('login-form').addEventListener('submit', async function(
     }
 });
 
-// 3. Проверка статуса авторизации при загрузке страницы
 function checkAuthStatus() {
     const token = localStorage.getItem('techStoreToken');
     const authBtnContainer = document.getElementById('auth-status');
     const adminPanel = document.getElementById('admin-panel');
 
-    // По умолчанию админка скрыта
-    if (adminPanel) adminPanel.style.display = 'none';
+    // Сброс (по умолчанию всё скрыто)
+    if (adminPanel) {
+        adminPanel.style.display = 'none';
+        adminPanel.style.backgroundColor = '#f9f9f9';
+        adminPanel.style.border = 'none';
+        const title = adminPanel.querySelector('h2');
+        if(title) title.innerText = "⚙️ Панель Администратора";
+    }
+    
     const logsBtn = document.getElementById('btn-tab-logs');
     if (logsBtn) logsBtn.style.display = 'none';
 
     if (token) {
-        // 1. Декодируем токен
+        // БЛОК АВТОРИЗОВАННОГО ПОЛЬЗОВАТЕЛЯ
         const decodedToken = parseJwt(token);
-        console.log("Токен:", decodedToken);
-
-        // 2. Достаем роль (или массив ролей)
+        
         let roleData = decodedToken["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] 
                        || decodedToken["role"] 
                        || "User";
 
-        // 3. Превращаем в массив, если это строка (чтобы код был универсальным)
         const userRoles = Array.isArray(roleData) ? roleData : [roleData];
         
-        console.log("Роли пользователя:", userRoles);
-
-        // 4. Логика интерфейса
-        const username = decodedToken.sub || decodedToken.email || decodedToken["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"] || "Гость";
+        // Получаем имя пользователя
+        const username = decodedToken.sub || decodedToken.email || "User";
         
+        // Кнопки профиля
         authBtnContainer.innerHTML = `
             <span style="color: white; margin-right: 10px;">Привет, ${username}!</span>
+            <button class="btn-login" onclick="openMyOrdersModal()" style="background:#2196F3; margin-right:5px;">Мои заказы</button>
             <button class="btn-login" onclick="logout()">Выйти</button>
         `;
 
-        // 5. Проверки (используем .includes, так как теперь у нас всегда массив)
         const isAdmin = userRoles.includes("Admin");
         const isOwner = userRoles.includes("BusinessOwner");
 
-        // Показываем панель, если есть хоть одна крутая роль
         if ((isAdmin || isOwner) && adminPanel) {
             adminPanel.style.display = 'block';
-        }
 
-        // Показываем кнопку логов ТОЛЬКО Владельцу
-        if (logsBtn && isOwner) {
-            logsBtn.style.display = 'inline-block';
+            // ВИЗУАЛИЗАЦИЯ ДЛЯ ВЛАДЕЛЬЦА 
+            if (isOwner) {
+                adminPanel.style.backgroundColor = '#fffbea'; 
+                adminPanel.style.border = '2px solid #d4af37'; 
+                
+                // Другой заголовок
+                const title = adminPanel.querySelector('h2');
+                if(title) title.innerText = "👑 Панель Владельца";
+                
+                // Показываем кнопку логов
+                if (logsBtn) logsBtn.style.display = 'inline-block';
+            }
         }
         
         userToken = token;
     } else {
-        // Гость
         authBtnContainer.innerHTML = `
             <button class="btn-login" onclick="openLoginModal()">Войти</button>
+            <button class="btn-login" onclick="openRegisterModal()" style="background:#00a046; margin-left:5px;">Регистрация</button>
         `;
         userToken = "";
     }
 }
+
+
 
 // 4. Выход
 function logout() {
@@ -711,6 +753,130 @@ async function loadSystemLogs() {
         console.error(e);
         tbody.innerHTML = '<tr><td colspan="6" style="color:red">Ошибка сети</td></tr>';
     }
+}
+
+// РЕГИСТРАЦИЯ
+
+function openRegisterModal() {
+    document.getElementById('register-modal').style.display = 'block';
+}
+
+document.getElementById('register-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('reg-email').value;
+    const password = document.getElementById('reg-password').value;
+    const confirm = document.getElementById('reg-confirm').value;
+    const errorMsg = document.getElementById('reg-error');
+
+    if (password !== confirm) {
+        errorMsg.innerText = "Пароли не совпадают!";
+        errorMsg.style.display = 'block';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+
+        if (response.ok) {
+            alert("Регистрация успешна! Теперь войдите.");
+            closeRegisterModal();
+            openLoginModal(); // Сразу даем войти
+        } else {
+            const err = await response.text();
+            errorMsg.innerText = "Ошибка: " + err;
+            errorMsg.style.display = 'block';
+        }
+    } catch (e) {
+        errorMsg.innerText = "Ошибка сети";
+        errorMsg.style.display = 'block';
+    }
+});
+
+function closeRegisterModal() {
+    document.getElementById('register-modal').style.display = 'none';
+    document.getElementById('reg-error').style.display = 'none';
+}
+
+// МОИ ЗАКАЗЫ (КЛИЕНТ)
+function openMyOrdersModal() {
+    document.getElementById('my-orders-modal').style.display = 'block';
+    loadMyOrders();
+}
+
+function closeMyOrdersModal() {
+    document.getElementById('my-orders-modal').style.display = 'none';
+}
+
+async function loadMyOrders() {
+    const tbody = document.getElementById('my-orders-table');
+    tbody.innerHTML = '<tr><td colspan="5">Загрузка...</td></tr>';
+
+    try {
+        const response = await fetch('/api/orders/my-orders', {
+            headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+
+        if (response.ok) {
+            const orders = await response.json();
+            tbody.innerHTML = '';
+
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">Вы еще ничего не заказывали 🛍️</td></tr>';
+                return;
+            }
+
+            orders.forEach(order => {
+                const tr = document.createElement('tr');
+                const date = new Date(order.orderDate).toLocaleDateString();
+                
+                // Статус на русском
+                const statusMap = {
+                    'Created': 'Создан',
+                    'Processing': 'В обработке',
+                    'Shipped': 'Отправлен',
+                    'Delivered': 'Доставлен',
+                    'Cancelled': 'Отменен'
+                };
+                const statusRu = statusMap[order.status] || order.status;
+
+                // Список товаров в заказе
+                const itemsSummary = order.items
+                    .map(i => `${i.productName} x${i.quantity}`)
+                    .join(', ');
+
+                tr.innerHTML = `
+                    <td>#${order.id}</td>
+                    <td>${date}</td>
+                    <td><strong>${order.totalAmount} ₴</strong></td>
+                    <td>${statusRu}</td>
+                    <td><small>${itemsSummary}</small></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" style="color:red">Ошибка загрузки</td></tr>';
+        }
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="5" style="color:red">Ошибка сети</td></tr>';
+    }
+}
+
+// Закрытие по клику
+window.onclick = function(event) {
+    // Старые проверки
+    if (event.target == document.getElementById('cart-modal')) closeCart();
+    if (event.target == document.getElementById('login-modal')) closeLoginModal();
+    if (event.target == document.getElementById('product-modal')) closeProductModal();
+    
+    // Новые проверки
+    if (event.target == document.getElementById('register-modal')) closeRegisterModal();
+    if (event.target == document.getElementById('my-orders-modal')) closeMyOrdersModal();
 }
 
 // Старт

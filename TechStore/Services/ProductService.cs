@@ -17,42 +17,47 @@ namespace TechStore.Services
         }
 
         // получить все товары (для покупателей)
-        public async Task<PagedResult<ProductDto>> GetAllAsync(int pageNumber, int pageSize, int? categoryId = null)
+        public async Task<PagedResult<ProductDto>> GetAllAsync(int page, int size, int? categoryId, string? search)
         {
             var query = _context.Products.AsQueryable();
+
+            // сокрытие удаленных и неактивных товаров от покупателей
+            query = query.Where(p => p.IsActive && !p.IsDeleted);
 
             if (categoryId.HasValue)
             {
                 query = query.Where(p => p.CategoryId == categoryId.Value);
             }
 
-            int totalItems = await query.CountAsync();
+            // ФИЛЬТР ПО ПОИСКУ 
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                // Ищем по вхождению (Contains)
+                query = query.Where(p => p.Name.Contains(search));
+            }
 
-            var products = await query
-                .Include(p => p.Category)
-                .OrderByDescending(p => p.Id) // Сначала новые
-                .Where(p => !p.IsDeleted && p.IsActive) // filtered by SoftDelete
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .Select(p => new ProductDto
-                {
-                    Id = p.Id,
-                    Name = p.Name,
-                    Description = p.Description,
-                    Price = p.Price,
-                    Stock = p.Stock,
-                    ImageUrl = p.ImageUrl,
-                    CategoryId = p.CategoryId,
-                    CategoryName = p.Category.Name
-                })
-                .ToListAsync();
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+        .Skip((page - 1) * size)
+        .Take(size)
+        .Select(p => new ProductDto
+        {
+            Id = p.Id,
+            Name = p.Name,
+            Price = p.Price,
+            Stock = p.Stock, // Важно для админки
+            ImageUrl = p.ImageUrl,
+            CategoryId = p.CategoryId
+        })
+        .ToListAsync();
 
             return new PagedResult<ProductDto>
             {
-                Items = products,
-                TotalItems = totalItems,
-                CurrentPage = pageNumber,
-                PageSize = pageSize
+                Items = items,
+                TotalItems = totalCount,
+                PageSize = size,
+                CurrentPage = page
             };
         }
 

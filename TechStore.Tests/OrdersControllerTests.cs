@@ -28,7 +28,8 @@ namespace TechStore.Tests
             var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
             {
                 new Claim(ClaimTypes.NameIdentifier, userId),
-                new Claim(ClaimTypes.Role, role)
+                new Claim(ClaimTypes.Role, role),
+                new Claim(ClaimTypes.Email, "test@example.com")
             }, "mock"));
 
             controller.ControllerContext = new ControllerContext

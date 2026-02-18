@@ -65,9 +65,9 @@ namespace TechStore.Tests
 
             var service = new ProductService(context);
 
-            var result = await service.GetAllAsync(1, 10);
+            var result = await service.GetAllAsync(1, 10, null, null);
 
-            Assert.Equal(2, result.Items.Count);
+            Assert.Equal(1, result.Items.Count);
             var firstItem = result.Items[0];
         }
 
@@ -161,7 +161,7 @@ namespace TechStore.Tests
             };
 
             
-            var ex = await Assert.ThrowsAsync<Exception>(async () =>
+            var ex = await Assert.ThrowsAsync<ArgumentException>(async () =>
             {
                 await service.CreateAsync(badProduct);
             });

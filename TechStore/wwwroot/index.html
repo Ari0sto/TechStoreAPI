@@ -8,20 +8,6 @@
 </head>
 <body>
 
-    <!-- <header>
-        <div class="container header-content">
-            <h1>TechStore</h1>
-            <button onclick="openCart()" class="cart-btn" style="margin-right: 15px; position: relative;">
-                🛒 Корзина
-                <span id="cart-count" class="cart-badge">0</span>
-            </button>
-            
-            <div id="auth-status">
-                <button class="btn-login" onclick="openLoginModal()">Войти</button> 
-            </div>
-        </div>
-    </header> -->
-
     <header>
         <div class="logo">TechStore</div>
     
@@ -118,6 +104,22 @@
 </div>
 
         <h2>Каталог товаров</h2>
+        <div class="filters-container" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+        
+            <input type="text" id="search-input" placeholder="🔍 Найти товар..."
+                style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; flex-grow: 1;">
+        
+            <select id="category-filter" style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                <option value="">Все категории</option>
+                <option value="1">Смартфоны</option>
+                <option value="2">Ноутбуки</option>
+                <option value="3">Телевизоры</option>
+                <option value="4">Аксессуары</option>
+            </select>
+        
+            <button onclick="applyFilters()" class="btn-primary" style="padding: 10px 20px;">Найти</button>
+        </div>
+        
         <div id="products-grid" class="products-grid">
             <p>Загрузка товаров...</p>
         </div>
@@ -202,6 +204,49 @@
 
             <button type="submit" class="btn-save" style="width:100%">Сохранить</button>
         </form>
+    </div>
+</div>
+
+    <div id="register-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="close" onclick="closeRegisterModal()">&times;</span>
+            <h2>Регистрация</h2>
+            <form id="register-form">
+                <div class="form-group">
+                    <input type="email" id="reg-email" placeholder="Email" required style="width:100%">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="reg-password" placeholder="Пароль" required style="width:100%">
+                </div>
+                <div class="form-group">
+                    <input type="password" id="reg-confirm" placeholder="Повторите пароль" required style="width:100%">
+                </div>
+                <p id="reg-error" style="color:red; display:none;"></p>
+                <button type="submit" class="btn-save" style="width:100%">Зарегистрироваться</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="my-orders-modal" class="modal">
+    <div class="modal-content" style="max-width: 95%; width: 1200px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>📦 Мои заказы</h2>
+            <span class="close" onclick="closeMyOrdersModal()">&times;</span>
+        </div>
+        
+        <table class="admin-table" style="margin-top:20px;">
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>Дата</th>
+                    <th>Сумма</th>
+                    <th>Статус</th>
+                    <th>Товары</th>
+                </tr>
+            </thead>
+            <tbody id="my-orders-table">
+                </tbody>
+        </table>
     </div>
 </div>
 

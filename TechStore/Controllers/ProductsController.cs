@@ -35,14 +35,15 @@ namespace TechStore.Controllers
         public async Task<ActionResult<PagedResult<ProductDto>>> GetAll(
             [FromQuery] int page = 1,
             [FromQuery] int size = 10,
-            [FromQuery] int? categoryId = null)
+            [FromQuery] int? categoryId = null,
+            [FromQuery] string? search = null)
         {
             // Проверка правильности знч.
             if (page < 1) page = 1;
             if (size < 1 || size > 100) size = 10;
             if (size > 50) size = 50;
 
-            var result = await _productService.GetAllAsync(page, size, categoryId);
+            var result = await _productService.GetAllAsync(page, size, categoryId, search);
             return Ok(result);
         }
 
